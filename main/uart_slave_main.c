@@ -10,9 +10,6 @@
 #define TAG "SLAVE"
 
 /**
- * This is an example which echos any data it receives on UART1 back to the sender,
- * with hardware flow control turned off. It does not use UART driver event queue.
- *
  * - Port: UART1
  * - Receive (Rx) buffer: on
  * - Transmit (Tx) buffer: off
@@ -34,7 +31,7 @@ static void echo_task(void *arg)
      * communication pins and install the driver */
     uart_config_t uart_config =
     {
-        .baud_rate = 115200,
+        .baud_rate = 9600,
         .data_bits = UART_DATA_8_BITS,
         .parity    = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
@@ -48,10 +45,35 @@ static void echo_task(void *arg)
     // Configure a temporary buffer for the incoming data
     uint8_t *data_from_slave = (uint8_t *) malloc(BUF_SIZE);
     uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
+    char null_string = '\0';
+    strncpy((char*)&data[1], &null_string, 1);
 
     char string[BUF_SIZE]= "Hello world from slave!";
     memcpy(data_from_slave, string, BUF_SIZE);
+#ifdef READ_FROM_TERMINAL
+    uint32_t available_bytes = 0;
+    while(1)
+    {
+        // Write data back to the UART
+        uart_write_bytes(UART_NUM_2, (const char *) data_from_slave, BUF_SIZE);
 
+        uart_get_buffered_data_len(UART_NUM_2, &available_bytes);
+        // ESP_LOGI(TAG, "Available number of bytes: %d", available_bytes);
+        // Read data from the UART
+        if(available_bytes > 10)
+        {
+            uart_read_bytes(UART_NUM_2, data, available_bytes, 200 / portTICK_RATE_MS);
+            data[available_bytes] = '\0';
+        }
+        if(data[0] != '\0')
+        {
+            ESP_LOGI(TAG, "Received from MASTER: %s", data);
+        }
+
+        strncpy((char*)&data[0], &null_string, 1);
+        vTaskDelay(100/portTICK_PERIOD_MS);
+    }
+#else
     while(1)
     {
         // Write data back to the UART
@@ -63,6 +85,7 @@ static void echo_task(void *arg)
 
         vTaskDelay(100/portTICK_PERIOD_MS);
     }
+#endif // READ_FROM_TERMINAL
 }
 
 void app_main(void)
