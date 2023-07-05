@@ -18,12 +18,13 @@
  * - Pin assignment: see defines below
  */
 
-#define PIN_TXD  (33)
-#define PIN_RXD  (39)
+#define ECHO_TEST_TXD  (GPIO_NUM_16)
+#define ECHO_TEST_RXD  (GPIO_NUM_17)
 #define ECHO_TEST_RTS  (UART_PIN_NO_CHANGE)
 #define ECHO_TEST_CTS  (UART_PIN_NO_CHANGE)
 
 #define BUF_SIZE (1024)
+#define READ_FROM_TERMINAL
 
 static void slave_read_write_task(void *arg)
 {
@@ -40,7 +41,7 @@ static void slave_read_write_task(void *arg)
     };
     uart_driver_install(UART_NUM_2, BUF_SIZE * 2, 0, 0, NULL, 0);
     uart_param_config(UART_NUM_2, &uart_config);
-    uart_set_pin(UART_NUM_2, PIN_TXD, PIN_RXD, ECHO_TEST_RTS, ECHO_TEST_CTS);
+    uart_set_pin(UART_NUM_2, ECHO_TEST_TXD, ECHO_TEST_RXD, ECHO_TEST_RTS, ECHO_TEST_CTS);
 
     // Configure a temporary buffer for the incoming data
     uint8_t *data_from_slave = (uint8_t *) malloc(BUF_SIZE);
@@ -58,9 +59,9 @@ static void slave_read_write_task(void *arg)
         uart_write_bytes(UART_NUM_2, (const char *) data_from_slave, BUF_SIZE);
 
         uart_get_buffered_data_len(UART_NUM_2, &available_bytes);
-        // ESP_LOGI(TAG, "Available number of bytes: %d", available_bytes);
+        ESP_LOGI(TAG, "Available number of bytes: %d", available_bytes);
         // Read data from the UART
-        if(available_bytes > 10)
+        // if(available_bytes > 1)
         {
             uart_read_bytes(UART_NUM_2, data, available_bytes, 200 / portTICK_RATE_MS);
             data[available_bytes] = '\0';
@@ -71,7 +72,7 @@ static void slave_read_write_task(void *arg)
         }
 
         strncpy((char*)&data[0], &null_string, 1);
-        vTaskDelay(100/portTICK_PERIOD_MS);
+        vTaskDelay(10/portTICK_PERIOD_MS);
     }
 #else
     while(1)
